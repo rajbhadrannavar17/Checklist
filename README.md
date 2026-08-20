@@ -1,10 +1,10 @@
 # Checklist
 
-## [Open Checklist](https://rajbhadrannavar17.github.io/Checklist/)
-
 Interactive web application and API security testing checklist, aligned with the supplied assessment flow.
 
-The live checklist is available at **[rajbhadrannavar17.github.io/Checklist](https://rajbhadrannavar17.github.io/Checklist/)**.
+> ## 🔗 [Open Checklist](https://rajbhadrannavar17.github.io/Checklist/)
+>
+> Launch the live, interactive checklist at **[rajbhadrannavar17.github.io/Checklist](https://rajbhadrannavar17.github.io/Checklist/)**.
 
 ## Included files
 
