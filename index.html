@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VAPT Checklist — Web / API</title>
+<style>
+  :root{
+    --bg: #FFFFFF;
+    --panel: #FFFFFF;
+    --panel-2: #FFFFFF;
+    --border: #000000;
+    --border-soft: #000000;
+    --text: #000000;
+    --muted: #000000;
+    --muted-2: #000000;
+    --amber: #000000;
+    --amber-dim: #FFFFFF;
+    --cyan: #000000;
+    --green: #000000;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    padding: 32px 16px 80px;
+  }
+  .wrap{ max-width: 760px; margin: 0 auto; }
+
+  /* header */
+  .eyebrow{
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--muted-2);
+    text-transform: uppercase;
+    margin: 0 0 6px;
+  }
+  h1{
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .sub{
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 24px;
+  }
+  .header-row{ margin-bottom:16px; }
+  .frameworks{ display:flex; flex-wrap:wrap; gap:7px; margin: 12px 0 24px; }
+  .frameworks a, .resource-links a{
+    color:var(--cyan); text-decoration:none; border-bottom:1px solid transparent;
+  }
+  .frameworks a{
+    font-family:var(--mono); font-size:10px; letter-spacing:.02em; border:1px solid var(--border);
+    background:var(--panel); border-radius:999px; padding:5px 8px;
+  }
+  .frameworks a:hover, .resource-links a:hover{ border-color:var(--cyan); }
+
+  /* toggle */
+  .toggle{
+    position: relative;
+    display: flex;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 20px;
+  }
+  .toggle button{
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 10px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: color 0.15s ease;
+  }
+  .toggle button.active{ color: var(--bg); }
+  .toggle .thumb{
+    position: absolute;
+    top: 4px; bottom: 4px; left: 4px;
+    width: calc(50% - 4px);
+    background: var(--amber);
+    border-radius: 6px;
+    transition: transform 0.2s ease;
+    z-index: 1;
+  }
+  .toggle .thumb.pos-1{ transform: translateX(100%); }
+
+  /* progress */
+  .progress-card{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+  }
+  .progress-top{
+    display:flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .progress-label{
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .progress-pct{
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--amber);
+    font-weight: 700;
+  }
+  .bar-track{
+    height: 6px;
+    background: var(--border-soft);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .bar-fill{
+    height: 100%;
+    background: var(--amber);
+    border-radius: 3px;
+    transition: width 0.25s ease;
+    width: 0%;
+  }
+  .progress-counts{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted-2);
+    margin-top: 8px;
+  }
+
+  /* actions */
+  .actions{
+    display:flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+  }
+  .reset-btn{
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+  }
+  .reset-btn:hover{ border-color: var(--muted-2); color: var(--text); }
+
+  /* categories */
+  details.cat{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  details.cat[open] summary{ border-bottom: 1px solid var(--border); }
+  summary.cat-head{
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    user-select: none;
+  }
+  summary.cat-head::-webkit-details-marker{ display:none; }
+  .cat-num{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    background: var(--amber-dim);
+    background: var(--amber-dim);
+    border-radius: 4px;
+    padding: 2px 6px;
+    min-width: 22px;
+    text-align: center;
+  }
+  .cat-title{
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .cat-count{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted-2);
+  }
+  .cat-chevron{
+    color: var(--muted-2);
+    font-size: 11px;
+    transition: transform 0.15s ease;
+  }
+  details.cat[open] .cat-chevron{ transform: rotate(90deg); }
+
+  .cat-body{ padding: 4px 8px 10px; }
+
+  .item{
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .item:hover{ background: var(--panel-2); }
+
+  .checkbox{
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    border: 1.5px solid var(--muted-2);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s ease;
+  }
+  .checkbox.checked{
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .checkbox svg{
+    width: 12px; height: 12px;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+  .checkbox.checked svg{ opacity: 1; }
+
+  .item-text{
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .resource-links{ display:flex; flex-wrap:wrap; gap:9px; margin-top:4px; font-family:var(--mono); font-size:10px; }
+  .category-reference{ display:block; margin:8px 8px 4px; font-family:var(--mono); font-size:10px; color:var(--text); }
+  .item.done .item-text{
+    color: var(--muted-2);
+    text-decoration: line-through;
+    text-decoration-color: var(--muted-2);
+  }
+  .item.done .resource-links a{ color:var(--cyan); text-decoration:none; }
+
+  @media (max-width: 480px){
+    h1{ font-size: 18px; }
+    .item-text{ font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header-row">
+    <h1>Checklist</h1>
+  </div>
+  <nav class="frameworks" aria-label="Security testing frameworks">
+    <a href="https://owasp.org/www-project-web-security-testing-guide/" target="_blank" rel="noopener noreferrer">OWASP WSTG</a>
+    <a href="https://owasp.org/API-Security/editions/2023/en/0x11-t10/" target="_blank" rel="noopener noreferrer">OWASP API Top 10 (2023)</a>
+    <a href="http://www.pentest-standard.org/index.php/Main_Page" target="_blank" rel="noopener noreferrer">PTES</a>
+    <a href="https://attack.mitre.org/" target="_blank" rel="noopener noreferrer">MITRE ATT&amp;CK</a>
+    <a href="https://cwe.mitre.org/" target="_blank" rel="noopener noreferrer">MITRE CWE</a>
+    <a href="https://csrc.nist.gov/pubs/sp/800/115/final" target="_blank" rel="noopener noreferrer">NIST SP 800-115</a>
+  </nav>
+
+  <div class="toggle" id="toggle">
+    <div class="thumb" id="thumb"></div>
+    <button type="button" id="btn-web" class="active">WEB APP</button>
+    <button type="button" id="btn-api">API</button>
+  </div>
+
+  <div class="progress-card">
+    <div class="progress-top">
+      <span class="progress-label" id="progress-label">WEB APP SCAN PROGRESS</span>
+      <span class="progress-pct" id="progress-pct">0%</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="bar-fill"></div></div>
+    <div class="progress-counts" id="progress-counts">0 / 0 checks complete</div>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="reset-btn" id="reset-btn">RESET CURRENT LIST</button>
+  </div>
+
+  <div id="categories"></div>
+
+</div>
+
+<script>
+const DATA = {
+  web: [
+    { id:'recon', title:'Recon & information gathering', items:[
+      'Passive recon: WHOIS, DNS records, certificate transparency (crt.sh)',
+      'Subdomain enumeration (amass, subfinder, assetfinder)',
+      'Technology fingerprinting (Wappalyzer, whatweb, HTTP headers)',
+      'robots.txt, sitemap.xml, security.txt review',
+      'Directory / file brute-forcing (ffuf, gobuster, dirsearch)',
+      'Check for exposed source control (.git, .svn), backups, config files',
+      'Spider/crawl app in Burp, map all functionality and roles'
+    ]},
+    { id:'config', title:'Configuration & deployment', items:[
+      'Unnecessary HTTP methods (PUT, DELETE, TRACE, OPTIONS)',
+      'HSTS presence and configuration',
+      'Security headers: CSP, X-Frame-Options, X-Content-Type-Options',
+      'SSL/TLS config — weak ciphers, protocol versions (testssl.sh)',
+      'CORS configuration for overly permissive origins',
+      'Admin/debug interfaces exposed (/actuator, /debug, /console)',
+      'Cloud storage misconfig (open S3 buckets, blobs)',
+      'Subdomain takeover potential (dangling CNAMEs)'
+    ]},
+    { id:'auth', title:'Authentication', items:[
+      'Username enumeration (login, register, reset, error messages)',
+      'Weak lockout / brute-force protection',
+      'Default, weak, or common credentials',
+      'Password policy strength',
+      'Password reset flow — token predictability, reuse, host header injection',
+      'Password change flow — side-channel oracle testing',
+      'MFA bypass — response manipulation, brute-forceable OTP',
+      'JWT implementation — alg:none, weak key, kid injection',
+      'OAuth2 / SSO flow — redirect_uri, state param, token leakage'
+    ]},
+    { id:'session', title:'Session management', items:[
+      'Session token entropy and predictability',
+      'Session fixation',
+      'Session invalidation on logout (server-side)',
+      'Session timeout — idle and absolute',
+      'Cookie attributes: HttpOnly, Secure, SameSite',
+      'Session token exposure in URLs, logs, referer headers',
+      'CSRF protections — token validation, state-changing GET requests'
+    ]},
+    { id:'authz', title:'Authorization & access control', items:[
+      'IDOR / BOLA — swap object IDs across users (Autorize)',
+      'Vertical privilege escalation',
+      'Horizontal privilege escalation',
+      'Forced browsing to restricted pages/endpoints',
+      'Parameter-based access control bypass',
+      'Mass assignment — extra JSON fields accepted',
+      'Re-test authz with path variations (encoding, case, trailing slash)'
+    ]},
+    { id:'input', title:'Input validation', items:[
+      'SQL injection — error-based, blind boolean, time-based',
+      'Cross-site scripting — reflected, stored, DOM-based',
+      'XML external entity (XXE) injection',
+      'Server-side template injection (SSTI)',
+      'SSRF — including cloud metadata endpoint access',
+      'Path traversal / LFI / RFI',
+      'File upload testing — extension bypass, content-type spoof, polyglots',
+      'HTTP request smuggling',
+      'Host header injection',
+      'Open redirect'
+    ]},
+    { id:'logic', title:'Business logic', items:[
+      'Workflow bypass — skipping steps in checkout/KYC',
+      'Race conditions — parallel requests (coupon, transfer, inventory)',
+      'Negative values / integer overflow in quantities, prices',
+      'Business rate limits — excessive API call abuse',
+      'Logic flaws in discount/coupon/referral systems'
+    ]},
+    { id:'client', title:'Client-side', items:[
+      'DOM-based XSS, open redirect, DOM clobbering',
+      'Clickjacking — missing X-Frame-Options/CSP frame-ancestors',
+      'WebSocket security — origin validation, auth, message tampering',
+      'Sensitive data in local/session storage',
+      'postMessage() handler validation',
+      'JS bundle review for exposed keys, internal endpoints'
+    ]},
+    { id:'crypto', title:'Cryptography', items:[
+      'Sensitive data transmitted without encryption (HTTP, mixed content)',
+      'Weak or custom crypto algorithms',
+      'Hardcoded keys/secrets in client-side code',
+      'Sensitive data cached or logged',
+      'Secure random number generation for tokens'
+    ]},
+    { id:'errors', title:'Error handling & info disclosure', items:[
+      'Error messages leak stack traces / DB errors / internal paths',
+      'Verbose API responses leaking schema or internals',
+      'Custom error pages for 4xx/5xx status codes',
+      'Exposed source map (.map) files'
+    ]}
+  ],
+  api: [
+    { id:'recon', title:'Recon & inventory', items:[
+      'Enumerate all API versions (v1, v2, legacy/shadow endpoints)',
+      'Locate API docs — Swagger/OpenAPI, Postman collections exposed publicly',
+      'Identify undocumented/zombie endpoints via traffic analysis',
+      'Fingerprint API gateway / framework',
+      'Check for exposed GraphQL introspection',
+      'Map endpoints by role/privilege required'
+    ]},
+    { id:'authtok', title:'Authentication & tokens', items:[
+      'API key handling — transmission, scope, rotation',
+      'JWT validation — alg:none, weak secret, kid injection, expiry',
+      'OAuth2 flow validation — redirect_uri, scope, token leakage',
+      'Token revocation on logout / password change',
+      'Refresh token reuse and rotation'
+    ]},
+    { id:'bola', title:'Object-level authorization (API1)', items:[
+      'Swap object IDs across test accounts on every endpoint',
+      'Test sequential / predictable ID enumeration',
+      'Test nested object access — sub-resources of another user',
+      'Confirm authorization enforced server-side, not just UI-hidden'
+    ]},
+    { id:'bfla', title:'Function-level authorization (API5)', items:[
+      'Access admin-only endpoints as low-priv user',
+      'Test HTTP verb tampering (GET allowed where POST is restricted)',
+      'Test undocumented / internal endpoints for auth gaps'
+    ]},
+    { id:'data', title:'Data exposure & mass assignment (API3)', items:[
+      'Check responses for excessive data — fields not shown in UI',
+      'Test mass assignment via extra JSON fields (isAdmin, role, balance)',
+      'Verify field-level authorization on partial updates (PATCH)'
+    ]},
+    { id:'resource', title:'Resource consumption & rate limiting (API4)', items:[
+      'Test missing / weak rate limiting per endpoint',
+      'Test pagination limits — large page size / offset abuse',
+      'Test payload size limits',
+      'Test expensive operations for DoS potential — batch, export'
+    ]},
+    { id:'flows', title:'Business flow abuse (API6)', items:[
+      'Test workflow bypass via direct API calls, skipping UI steps',
+      'Test automation/bot abuse of sensitive flows (bulk account creation)',
+      'Test excessive use of free-tier or one-time-use flows'
+    ]},
+    { id:'ssrf', title:'SSRF & third-party consumption (API7 / API10)', items:[
+      'Test URL/webhook parameters for SSRF — internal IPs, cloud metadata',
+      'Test file-fetch or import-by-URL features',
+      'Review trust boundaries with integrated third-party APIs',
+      'Validate responses from third-party APIs before use'
+    ]},
+    { id:'misconfig', title:'Security misconfiguration (API8)', items:[
+      'Verbose error messages / stack traces in API responses',
+      'Missing security headers on API responses',
+      'Default credentials/configs on API management tools',
+      'CORS misconfiguration for API origins',
+      'TLS configuration on API endpoints'
+    ]},
+    { id:'graphql', title:'GraphQL specific', items:[
+      'Introspection query enabled in production',
+      'Field/type suggestion leakage on errors',
+      'Batching attack potential (array of queries)',
+      'Deeply nested query / query complexity DoS',
+      'Authorization enforced per-resolver, not just per-query',
+      'Alias-based rate limit bypass'
+    ]}
+  ]
+};
+
+// Reference material is intentionally linked per checklist category so every
+// test has a concise description plus an authorised-testing guide and tool tutorial.
+const RESOURCES = {
+  web: {
+    recon: ['OWASP information gathering', 'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/', 'Amass tool guide', 'https://github.com/owasp-amass/amass'],
+    config: ['OWASP configuration testing', 'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/', 'testssl.sh guide', 'https://testssl.sh/'],
+    auth: ['OWASP authentication testing', 'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/03-Identity_Management_Testing/', 'Burp authentication testing', 'https://portswigger.net/web-security/authentication'],
+    session: ['OWASP session management', 'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/', 'Burp session testing', 'https://portswigger.net/web-security/authentication/other-mechanisms'],
+    authz: ['OWASP authorization testing', 'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/05-Authorization_Testing/', 'Burp access control guide', 'https://portswigger.net/web-security/access-control'],
+    input: ['OWASP input validation', 'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/', 'Burp Web Security Academy', 'https://portswigger.net/web-security/learning-paths'],
+    logic: ['OWASP business logic testing', 'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/10-Business_Logic_Testing/', 'Burp logic-flaw guide', 'https://portswigger.net/web-security/logic-flaws'],
+    client: ['OWASP client-side testing', 'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/11-Client-side_Testing/', 'Burp client-side guide', 'https://portswigger.net/web-security/cross-site-scripting'],
+    crypto: ['OWASP cryptography testing', 'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/', 'OWASP cryptographic storage', 'https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html'],
+    errors: ['OWASP error handling testing', 'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/08-Testing_for_Error_Handling/', 'OWASP error handling guide', 'https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html']
+  },
+  api: {
+    recon: ['OWASP API inventory guidance', 'https://owasp.org/API-Security/editions/2023/en/0x11-t10/', 'Postman API learning', 'https://learning.postman.com/'],
+    authtok: ['OWASP API authentication', 'https://owasp.org/API-Security/editions/2023/en/0xa2-broken-authentication/', 'OAuth 2.0 Security BCP', 'https://datatracker.ietf.org/doc/html/rfc9700'],
+    bola: ['OWASP API1: BOLA', 'https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/', 'Burp API testing', 'https://portswigger.net/web-security/api-testing'],
+    bfla: ['OWASP API5: BFLA', 'https://owasp.org/API-Security/editions/2023/en/0xa5-broken-function-level-authorization/', 'Burp API testing', 'https://portswigger.net/web-security/api-testing'],
+    data: ['OWASP API3: property-level authorization', 'https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/', 'Postman API testing', 'https://learning.postman.com/docs/tests-and-scripts/write-scripts/test-scripts/'],
+    resource: ['OWASP API4: resource consumption', 'https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/', 'OWASP API testing tools', 'https://owasp.org/www-community/controls/Testing_for_Weak_lock_out_mechanism'],
+    flows: ['OWASP API6: sensitive business flows', 'https://owasp.org/API-Security/editions/2023/en/0xa6-unrestricted-access-to-sensitive-business-flows/', 'Burp logic-flaw guide', 'https://portswigger.net/web-security/logic-flaws'],
+    ssrf: ['OWASP API7 / API10', 'https://owasp.org/API-Security/editions/2023/en/0xa7-server-side-request-forgery/', 'Burp SSRF guide', 'https://portswigger.net/web-security/ssrf'],
+    misconfig: ['OWASP API8: misconfiguration', 'https://owasp.org/API-Security/editions/2023/en/0xa8-security-misconfiguration/', 'OWASP configuration testing', 'https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/'],
+    graphql: ['OWASP GraphQL testing', 'https://cheatsheetseries.owasp.org/cheatsheets/GraphQL_Cheat_Sheet.html', 'Burp GraphQL guide', 'https://portswigger.net/web-security/graphql']
+  }
+};
+
+// Ordered to follow the supplied engagement flow. Sources appear once only,
+// at category level, rather than being repeated for every check.
+DATA.web = [
+  {id:'scope',title:'1. Pre-engagement & scope',items:['Confirm written authorisation and testing window','Record in-scope and out-of-scope assets','Obtain role-based test accounts and identify authentication','Confirm environments, permitted techniques, rate/DoS limits and tester IP','Define evidence collection and reporting requirements']},
+  {id:'recon',title:'2. Reconnaissance & attack-surface discovery',items:['Identify domains, subdomains, technologies and exposed documentation','Review JavaScript, API references, robots.txt, sitemap.xml and security.txt','Search for exposed endpoints, cloud storage and accidentally published files','Enumerate authorised hosts, HTTP services, virtual hosts, directories and files','Identify backups, configuration files, administrative and debug interfaces']},
+  {id:'tls',title:'3. TLS / HTTPS',items:['Enforce HTTPS and redirects; validate certificate and hostname','Disable weak TLS versions and cipher suites','Configure HSTS and secure cookie attributes','Ensure sensitive information never transits over HTTP']},
+  {id:'headers',title:'4. Security headers & caching',items:['Review CSP, HSTS, X-Content-Type-Options, Referrer-Policy and Permissions-Policy','Review X-Frame-Options or CSP frame-ancestors','Test CSP directives for unsafe values and broad wildcards','Ensure sensitive responses are not cached by browsers or proxies']},
+  {id:'auth',title:'5. Authentication & session management',items:['Test enumeration, password policy, spraying resistance, brute-force controls and lockout','Review default credentials, authentication errors, reset and password-change flows','Assess session ID randomness, fixation, expiry, logout and concurrent sessions','Verify Secure, HttpOnly and appropriate SameSite cookies','Ensure session tokens are absent from URLs and Referer headers']},
+  {id:'authz',title:'6. Authorization / access control',items:['Test each sensitive function with distinct roles','Verify horizontal and vertical access controls server-side','Test IDOR/BOLA, missing authorization and privilege escalation','Test forced browsing, parameter manipulation and HTTP method manipulation']},
+  {id:'input',title:'7. Input validation',items:['Cover query, POST, JSON, headers, cookies, paths, files and HTTP methods','Test XSS, SQL/NoSQL, LDAP, XML, template, command and expression injection','Test CRLF injection and HTTP parameter pollution']},
+  {id:'xss',title:'8. XSS testing',items:['Identify reflected parameters and output contexts','Test encoding and filtering in HTML, attribute, JavaScript and URL contexts','Test stored-XSS inputs: profiles, comments, messages, uploads and admin tools','Review DOM sources/sinks including innerHTML, document.write, eval, location and postMessage']},
+  {id:'injection',title:'9. Injection testing',items:['Test SQL injection in login, search, IDs, filters, headers, cookies and JSON','Check error, boolean, time and UNION behaviours where appropriate','Test NoSQL operators and authentication/search queries','Review file processing, utilities, imports/exports and media handling for command injection']},
+  {id:'upload',title:'10. File upload',items:['Validate extension, MIME type, content, filename and file size','Test traversal, double extensions, execution, SVG/HTML uploads and server processing','Review storage controls and malware scanning where applicable']},
+  {id:'traversal',title:'11. Path traversal & file inclusion',items:['Test local/remote inclusion where relevant, traversal encodings and alternate paths','Assess file download and export functionality']},
+  {id:'ssrf',title:'12. SSRF',items:['Identify URL preview, webhooks, import, PDF generation, integration and callback features','Test internal network and cloud-metadata exposure','Review redirect handling, DNS-rebinding protections and allowlist validation']},
+  {id:'csrf',title:'13. CSRF',items:['Verify CSRF tokens are required, session-bound and server validated','Review SameSite and Origin/Referer checks; ensure GET is not state-changing','Test account, transaction and administrative changes']},
+  {id:'logic',title:'14. Business logic',items:['Test workflow bypass, step skipping, price/quantity manipulation and coupon abuse','Test race conditions, duplicate transactions, replay and unauthorized state changes','Test recovery, verification, approvals, limits and multi-account abuse']},
+  {id:'cors',title:'15. CORS',items:['Identify policy and test arbitrary/null origins','Test credentialed cross-origin requests and wildcard configuration','Verify sensitive endpoints remain protected']},
+  {id:'http',title:'16. HTTP-level testing',items:['Test HTTP methods, OPTIONS, TRACE and request-smuggling indicators','Test Host and forwarding headers, cache poisoning/deception and parameter pollution','Test request desynchronization']},
+  {id:'errors',title:'17. Error handling & information disclosure',items:['Check stack traces, debug messages, versions, database errors and internal paths','Check source/configuration disclosure, response secrets, sensitive logs and excessive API errors']},
+  {id:'sensitive',title:'18. Sensitive data exposure',items:['Ensure passwords, tokens and API keys are not exposed unnecessarily','Minimise PII and encrypt sensitive data in transit','Keep sensitive data out of URLs, caches, client-side JavaScript and source maps']}
+];
+
+// build stable ids
+for (const list of ['web','api']){
+  DATA[list].forEach(cat => {
+    cat.items = cat.items.map((text,i) => ({ id: list+'-'+cat.id+'-'+i, text }));
+  });
+}
+
+let current = 'web';
+let state = { web:{}, api:{} };
+
+const checkIcon = '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="#000000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function totalsFor(list){
+  const cats = DATA[list];
+  let total = 0, checked = 0;
+  cats.forEach(cat => {
+    cat.items.forEach(it => {
+      total++;
+      if (state[list][it.id]) checked++;
+    });
+  });
+  return { total, checked };
+}
+
+function render(){
+  const cats = DATA[current];
+  const shownSources = new Set();
+  const container = document.getElementById('categories');
+  container.innerHTML = '';
+
+  cats.forEach((cat, idx) => {
+    const catTotal = cat.items.length;
+    const catChecked = cat.items.filter(it => state[current][it.id]).length;
+
+    const details = document.createElement('details');
+    details.className = 'cat';
+    details.open = true;
+
+    const summary = document.createElement('summary');
+    summary.className = 'cat-head';
+    summary.innerHTML =
+      '<span class="cat-num">' + String(idx).padStart(2,'0') + '</span>' +
+      '<span class="cat-title">' + cat.title + '</span>' +
+      '<span class="cat-count">' + catChecked + '/' + catTotal + '</span>' +
+      '<span class="cat-chevron">&#9656;</span>';
+    details.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.className = 'cat-body';
+    const refs = RESOURCES[current][cat.id];
+    if (refs && !shownSources.has(refs[1])) {
+      shownSources.add(refs[1]);
+      const reference = document.createElement('a');
+      reference.className = 'category-reference';
+      reference.href = refs[1]; reference.target = '_blank'; reference.rel = 'noopener noreferrer';
+      reference.textContent = '↗ Reference: ' + refs[0];
+      body.appendChild(reference);
+    }
+
+    cat.items.forEach(it => {
+      const isChecked = !!state[current][it.id];
+      const row = document.createElement('div');
+      row.className = 'item' + (isChecked ? ' done' : '');
+
+      const box = document.createElement('div');
+      box.className = 'checkbox' + (isChecked ? ' checked' : '');
+      box.innerHTML = checkIcon;
+
+      const label = document.createElement('div');
+      label.className = 'item-text';
+      label.textContent = it.text;
+
+      row.appendChild(box);
+      row.appendChild(label);
+
+      row.addEventListener('click', () => toggleItem(it.id));
+
+      body.appendChild(row);
+    });
+
+    details.appendChild(body);
+    container.appendChild(details);
+  });
+
+  updateProgress();
+}
+
+function toggleItem(id){
+  state[current][id] = !state[current][id];
+  saveState();
+  render();
+}
+
+function updateProgress(){
+  const { total, checked } = totalsFor(current);
+  const pct = total === 0 ? 0 : Math.round((checked/total)*100);
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('bar-fill').style.width = pct + '%';
+  document.getElementById('progress-counts').textContent = checked + ' / ' + total + ' checks complete';
+  document.getElementById('progress-label').textContent =
+    (current === 'web' ? 'WEB APP' : 'API') + ' SCAN PROGRESS';
+}
+
+function setTab(tab){
+  current = tab;
+  document.getElementById('btn-web').classList.toggle('active', tab === 'web');
+  document.getElementById('btn-api').classList.toggle('active', tab === 'api');
+  document.getElementById('thumb').classList.toggle('pos-1', tab === 'api');
+  render();
+}
+
+document.getElementById('btn-web').addEventListener('click', () => setTab('web'));
+document.getElementById('btn-api').addEventListener('click', () => setTab('api'));
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  state[current] = {};
+  saveState();
+  render();
+});
+
+function saveState(){
+  try{
+    if (typeof window.storage !== 'undefined'){
+      window.storage.set('vapt-checklist-state', JSON.stringify(state)).catch(()=>{});
+    }
+  }catch(e){}
+}
+
+function loadState(){
+  try{
+    if (typeof window.storage !== 'undefined'){
+      window.storage.get('vapt-checklist-state').then(res => {
+        if (res && res.value){
+          try{
+            const parsed = JSON.parse(res.value);
+            if (parsed && parsed.web && parsed.api){
+              state = parsed;
+              render();
+            }
+          }catch(e){}
+        }
+      }).catch(()=>{});
+    }
+  }catch(e){}
+}
+
+loadState();
+render();
+</script>
+</body>
+</html>
