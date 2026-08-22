@@ -62,6 +62,10 @@
     background:var(--panel); border-radius:999px; padding:5px 8px;
   }
   .frameworks a:hover, .resource-links a:hover{ border-color:var(--cyan); }
+  .target-context{ display:flex; align-items:center; gap:8px; margin:0 0 16px; padding:10px; border:1px solid var(--border); border-radius:6px; font:11px var(--mono); }
+  .target-context label{ font-weight:700; white-space:nowrap; }
+  .shared-target{ min-width:0; flex:1; padding:7px 8px; border:1px solid var(--border); border-radius:4px; background:var(--panel); color:var(--text); font:12px var(--mono); }
+  .target-status{ white-space:nowrap; }
 
   /* toggle */
   .toggle{
@@ -261,6 +265,7 @@
   .command-btn{ padding:7px 9px; border:1px solid var(--border); border-radius:4px; background:var(--text); color:var(--bg); font:700 11px var(--mono); cursor:pointer; }
   .command-output{ display:none; white-space:pre-wrap; overflow-wrap:anywhere; margin:10px 0 0; font:11px/1.55 var(--mono); }
   .command-output.visible{ display:block; }
+  .helper-target{ margin:0 0 8px; font:11px var(--mono); }
   .item.done .item-text{
     color: var(--muted-2);
     text-decoration: line-through;
@@ -288,6 +293,12 @@
     <a href="https://cwe.mitre.org/" target="_blank" rel="noopener noreferrer">MITRE CWE</a>
     <a href="https://csrc.nist.gov/pubs/sp/800/115/final" target="_blank" rel="noopener noreferrer">NIST SP 800-115</a>
   </nav>
+  <div class="target-context">
+    <label for="shared-target">AUTHORISED TARGET</label>
+    <input class="shared-target" id="shared-target" placeholder="https://app.example.com or 192.0.2.10" autocomplete="off">
+    <button type="button" class="command-btn" id="set-target">SET TARGET</button>
+    <span class="target-status" id="target-status">Not set</span>
+  </div>
 
   <div class="toggle" id="toggle">
     <div class="thumb" id="thumb"></div>
@@ -534,7 +545,19 @@ const API_PHASE_HELPERS = {
   graphql: ['GraphQL work-card', ['Identify the GraphQL endpoint from authorised documentation or traffic.', 'Review introspection, resolver authorization, query depth, aliases and batching within agreed limits.', 'Record limits and error-handling behaviour.']]
 };
 
-function commandFor(helper, target, phase){
+const WEB_TOOLKIT = {
+  scope:'Scope register, test-account matrix, evidence log', recon:'Nmap, Masscan/RustScan, Amass, subfinder, httpx, WhatWeb, Wappalyzer, ffuf, dirsearch, Gobuster, Nikto, Nuclei', tls:'testssl.sh, SSLyze, Nmap ssl-enum-ciphers, Qualys SSL Labs', headers:'curl, Burp Suite, OWASP ZAP, SecurityHeaders', auth:'Burp Suite Professional/Community, OWASP ZAP, JWT Inspector, OAuth/OIDC debugger', authz:'Burp Suite Repeater/Comparer, Autorize, OWASP ZAP', input:'Burp Suite Scanner/Repeater, OWASP ZAP Active Scan, sqlmap (explicit approval only), NoSQLMap', xss:'Burp Suite Scanner, OWASP ZAP, DOM Invader, browser DevTools', injection:'Burp Suite Scanner/Repeater, OWASP ZAP, sqlmap (explicit approval only), NoSQLMap', upload:'Burp Suite, OWASP ZAP, file-type and AV/sandbox validation', traversal:'Burp Suite Repeater, OWASP ZAP, browser DevTools', ssrf:'Burp Collaborator, OWASP ZAP, approved callback service', csrf:'Burp Suite Engagement tools/Repeater, OWASP ZAP, browser DevTools', logic:'Burp Suite Repeater, Turbo Intruder within agreed rate limits, OWASP ZAP', cors:'curl, Burp Suite, OWASP ZAP', http:'Burp Suite, OWASP ZAP, curl, Nuclei', errors:'Burp Suite, OWASP ZAP, Nuclei, browser DevTools', sensitive:'Burp Suite, OWASP ZAP, browser DevTools, Gitleaks, TruffleHog, Semgrep'
+};
+const API_TOOLKIT = {
+  recon:'Postman, Insomnia, Burp Suite, OWASP ZAP, Nuclei, httpx', authtok:'Postman, Burp Suite, OWASP ZAP, JWT Inspector, OAuth/OIDC debugger', bola:'Burp Suite Repeater/Comparer, Postman, OWASP ZAP', bfla:'Burp Suite Repeater, Postman, OWASP ZAP', data:'Postman, Burp Suite, OWASP ZAP', resource:'k6, JMeter, Burp Suite, OWASP ZAP (within rate limits)', flows:'Postman, Burp Suite Repeater, OWASP ZAP', ssrf:'Burp Collaborator, OWASP ZAP, approved callback service', misconfig:'Nuclei, OWASP ZAP, Burp Suite, Nessus, Greenbone/OpenVAS, Qualys, Rapid7 InsightVM', graphql:'Burp Suite, OWASP ZAP, GraphQL Voyager, InQL'
+};
+const PHASE_EXAMPLES = {
+  input:'SQLi example (safe validation): a product-search or order-lookup parameter changes database-query behaviour. Compare a normal request with a harmless, non-destructive test variation; investigate consistent response, error or timing differences only in scope. Use Burp Suite Scanner/Repeater or OWASP ZAP first; use sqlmap only when explicitly approved and rate-limited.',
+  xss:'XSS example (safe validation): a comment, profile or support field is later rendered in a different user’s browser without context-aware encoding. Validate with a harmless unique marker in an approved test account, then inspect the exact HTML/DOM context in DevTools. Use Burp Suite, OWASP ZAP and DOM Invader; do not target real users.',
+  injection:'SQLi example (safe validation): a filter, login or JSON field produces a reproducible database error, different result set or measurable delay when malformed input is processed. Confirm with low-impact test data, preserve the request/response evidence, and avoid modifying or extracting production data.'
+};
+
+function commandFor(helper, target, phase, categoryId, list){
   const raw = target.trim();
   if (!raw) return '';
   let url = raw;
@@ -542,11 +565,14 @@ function commandFor(helper, target, phase){
   let host;
   try { host = new URL(url).hostname; } catch(e) { return 'Enter a valid authorised URL or IP address.'; }
   const actions = helper[1].map((line, index) => (index + 1) + '. ' + line.replaceAll('{url}', url).replaceAll('{host}', host).replaceAll('{target}', raw)).join('\n\n');
+  const tools = (list === 'web' ? WEB_TOOLKIT : API_TOOLKIT)[categoryId] || 'Burp Suite, OWASP ZAP, browser DevTools';
+  const example = list === 'web' && PHASE_EXAMPLES[categoryId] ? '\n\nReal-world validation example\n' + PHASE_EXAMPLES[categoryId] : '';
   return 'VAPT WORK-CARD\n' +
     'Phase: ' + phase + '\n' +
     'Target: ' + url + ' (host: ' + host + ')\n\n' +
     'Objective\nValidate the controls relevant to this phase against the authorised target, while preserving service availability and collecting reproducible evidence.\n\n' +
-    'Execution plan\n' + actions + '\n\n' +
+    'Recommended tooling\n' + tools + '\n\n' +
+    'Execution plan\n' + actions + example + '\n\n' +
     'Evidence to capture\n• Exact request/command and UTC timestamp\n• Sanitised request/response, status code, headers and relevant screenshots\n• Test-account role, affected object/endpoint and observed versus expected result\n\n' +
     'Validation standard\nConfirm findings with a repeatable, low-impact test. Record scope, preconditions, business impact, remediation guidance and retest result. Do not test beyond written authorisation or agreed rate limits.';
 }
@@ -583,6 +609,7 @@ for (const list of ['web','api']){
 
 let current = 'web';
 let state = { web:{}, api:{} };
+let sharedTarget = '';
 
 const checkIcon = '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="#000000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -659,16 +686,15 @@ function render(){
       const panel = document.createElement('section');
       panel.className = 'command-helper';
       panel.innerHTML = '<p class="command-helper-title">' + helper[0] + '</p>' +
-        '<div class="command-controls"><input class="command-target" aria-label="Authorised target URL or IP" placeholder="Authorised target URL or IP">' +
-        '<button type="button" class="command-btn">GENERATE</button></div>' +
+        '<p class="helper-target">Using shared target: <span></span></p>' +
+        '<div class="command-controls"><button type="button" class="command-btn">GENERATE DETAILED WORK-CARD</button></div>' +
         '<pre class="command-output"></pre>';
-      const input = panel.querySelector('.command-target');
+      panel.querySelector('.helper-target span').textContent = sharedTarget || 'Set the authorised target above.';
       const output = panel.querySelector('.command-output');
       panel.querySelector('.command-btn').addEventListener('click', () => {
-        output.textContent = commandFor(helper, input.value, cat.title);
+        output.textContent = commandFor(helper, sharedTarget, cat.title, cat.id, current);
         output.classList.toggle('visible', !!output.textContent);
       });
-      input.addEventListener('keydown', event => { if (event.key === 'Enter') panel.querySelector('.command-btn').click(); });
       body.appendChild(panel);
     }
 
@@ -703,8 +729,29 @@ function setTab(tab){
   render();
 }
 
+function syncSharedTarget(){
+  document.getElementById('shared-target').value = sharedTarget;
+  document.getElementById('target-status').textContent = sharedTarget ? 'Saved for all phases' : 'Not set';
+}
+
+function setSharedTarget(){
+  const value = document.getElementById('shared-target').value.trim();
+  if (value) {
+    let candidate = value;
+    if (!/^https?:\/\//i.test(candidate)) candidate = 'https://' + candidate;
+    try { new URL(candidate); } catch(e) { document.getElementById('target-status').textContent = 'Enter a valid URL or IP'; return; }
+  }
+  sharedTarget = value;
+  state.target = sharedTarget;
+  saveState();
+  syncSharedTarget();
+  render();
+}
+
 document.getElementById('btn-web').addEventListener('click', () => setTab('web'));
 document.getElementById('btn-api').addEventListener('click', () => setTab('api'));
+document.getElementById('set-target').addEventListener('click', setSharedTarget);
+document.getElementById('shared-target').addEventListener('keydown', event => { if (event.key === 'Enter') setSharedTarget(); });
 
 document.getElementById('reset-btn').addEventListener('click', () => {
   state[current] = {};
@@ -729,6 +776,8 @@ function loadState(){
             const parsed = JSON.parse(res.value);
             if (parsed && parsed.web && parsed.api){
               state = parsed;
+              sharedTarget = parsed.target || '';
+              syncSharedTarget();
               render();
             }
           }catch(e){}
@@ -739,6 +788,7 @@ function loadState(){
 }
 
 loadState();
+syncSharedTarget();
 render();
 </script>
 </body>
