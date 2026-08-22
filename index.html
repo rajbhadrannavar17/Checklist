@@ -254,6 +254,13 @@
   }
   .resource-links{ display:flex; flex-wrap:wrap; gap:9px; margin-top:4px; font-family:var(--mono); font-size:10px; }
   .category-reference{ display:block; margin:8px 8px 4px; font-family:var(--mono); font-size:10px; color:var(--text); }
+  .command-helper{ margin:12px 8px 4px; padding:12px; border:1px solid var(--border); border-radius:6px; }
+  .command-helper-title{ font-size:12px; font-weight:700; margin:0 0 8px; }
+  .command-controls{ display:flex; gap:8px; }
+  .command-target{ min-width:0; flex:1; padding:7px 8px; border:1px solid var(--border); border-radius:4px; background:var(--panel); color:var(--text); font:12px var(--mono); }
+  .command-btn{ padding:7px 9px; border:1px solid var(--border); border-radius:4px; background:var(--text); color:var(--bg); font:700 11px var(--mono); cursor:pointer; }
+  .command-output{ display:none; white-space:pre-wrap; overflow-wrap:anywhere; margin:10px 0 0; font:11px/1.55 var(--mono); }
+  .command-output.visible{ display:block; }
   .item.done .item-text{
     color: var(--muted-2);
     text-decoration: line-through;
@@ -493,6 +500,37 @@ const RESOURCES = {
   }
 };
 
+const PHASE_HELPERS = {
+  scope: ['Preparation checklist', ['Record the approved target: {target}', 'Confirm the testing window, allowed techniques, rate limits and emergency contact.', 'Create a test-account / role matrix before beginning.']],
+  recon: ['Recon command generator', ['whois {host}', 'nmap -sV -sC -Pn -T3 {host}', 'whatweb {url}', 'nikto -h {url}', 'nuclei -u {url} -severity medium,high,critical']],
+  tls: ['TLS / HTTPS checks', ['curl -sI {url}', 'testssl.sh {host}', 'nmap -p 443 --script ssl-enum-ciphers {host}']],
+  headers: ['HTTP header checks', ['curl -sI {url}', 'curl -s -D - -o /dev/null {url}', 'Review CSP, HSTS, framing, caching and referrer headers in the response.']],
+  auth: ['Authentication test guide', ['Use Burp Suite Proxy and Repeater against the authorised login, reset and password-change requests.', 'Test controls manually: enumeration, rate limits, lockout, MFA and session invalidation.', 'Document only confirmed behaviour and use dedicated test accounts.']],
+  authz: ['Access-control test guide', ['Capture a request as each authorised test role in Burp Repeater.', 'Compare object ownership and privileged endpoints using only test-account data.', 'Verify server-side enforcement for IDOR/BOLA, role changes and forced browsing.']],
+  input: ['Input-validation test guide', ['Use Burp Suite Repeater to enumerate query, body, JSON, header, cookie and path inputs.', 'Use the OWASP WSTG test cases for the relevant input context.', 'Prioritise validation failures without using destructive payloads.']],
+  xss: ['JavaScript / XSS review', ['Use browser DevTools Sources and Burp’s sitemap to identify JavaScript bundles.', 'Search for risky DOM sinks: innerHTML, outerHTML, document.write, eval and postMessage.', 'Test output encoding safely in reflected, stored and DOM contexts.']],
+  injection: ['Injection test guide', ['Use Burp Repeater to compare normal and malformed input handling.', 'Check for error, boolean and time-based anomalies with non-destructive test values.', 'Review database, search, import/export and file-processing endpoints.']],
+  upload: ['File-upload test guide', ['Upload only harmless, approved test files.', 'Check extension, MIME type, content validation, filename handling and storage access.', 'Review SVG/HTML handling, server-side processing and download permissions.']],
+  traversal: ['File-access test guide', ['Map download, attachment and export endpoints in Burp Suite.', 'Check normal and encoded path handling using only harmless test resources.', 'Verify access controls before and after canonicalisation.']],
+  ssrf: ['SSRF test guide', ['Identify URL preview, webhook, import, callback and integration features.', 'Use a controlled collaborator/callback service approved for the engagement.', 'Check allowlists, redirects and cloud metadata protections.']],
+  csrf: ['CSRF test guide', ['Capture a state-changing request in Burp Suite.', 'Review CSRF token, SameSite cookie and Origin/Referer handling.', 'Test only changes made to authorised test accounts.']],
+  logic: ['Business-logic test guide', ['Create a workflow map for each sensitive action.', 'Use Burp Repeater or Turbo Intruder only within agreed rate limits.', 'Check step order, totals, state transitions, replay and concurrent actions.']],
+  cors: ['CORS checks', ['curl -sI -H "Origin: https://example.invalid" {url}', 'curl -sI -H "Origin: null" {url}', 'Review Access-Control-Allow-Origin, credentials and Vary headers.']],
+  http: ['HTTP-level checks', ['curl -s -D - -o /dev/null -X OPTIONS {url}', 'curl -sI {url}', 'Use Burp HTTP history to review method handling, forwarding headers and cache behaviour.']],
+  errors: ['Error / disclosure checks', ['curl -s -i {url}', 'Review authorised error paths for stack traces, versions, internal paths and secrets.', 'Check source maps and verbose API responses without requesting sensitive production data.']],
+  sensitive: ['Sensitive-data checks', ['curl -s {url}', 'Use browser DevTools Network and Storage panels to review authorised test traffic.', 'Check URLs, caches, JavaScript bundles and source maps for unintended sensitive data.']]
+};
+
+function commandFor(helper, target){
+  const raw = target.trim();
+  if (!raw) return '';
+  let url = raw;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  let host;
+  try { host = new URL(url).hostname; } catch(e) { return 'Enter a valid authorised URL or IP address.'; }
+  return helper[1].map(line => line.replaceAll('{url}', url).replaceAll('{host}', host).replaceAll('{target}', raw)).join('\n\n');
+}
+
 // Ordered to follow the supplied engagement flow. Sources appear once only,
 // at category level, rather than being repeated for every check.
 DATA.web = [
@@ -595,6 +633,24 @@ function render(){
 
       body.appendChild(row);
     });
+
+    const helper = current === 'web' ? PHASE_HELPERS[cat.id] : null;
+    if (helper) {
+      const panel = document.createElement('section');
+      panel.className = 'command-helper';
+      panel.innerHTML = '<p class="command-helper-title">' + helper[0] + '</p>' +
+        '<div class="command-controls"><input class="command-target" aria-label="Authorised target URL or IP" placeholder="Authorised target URL or IP">' +
+        '<button type="button" class="command-btn">GENERATE</button></div>' +
+        '<pre class="command-output"></pre>';
+      const input = panel.querySelector('.command-target');
+      const output = panel.querySelector('.command-output');
+      panel.querySelector('.command-btn').addEventListener('click', () => {
+        output.textContent = commandFor(helper, input.value);
+        output.classList.toggle('visible', !!output.textContent);
+      });
+      input.addEventListener('keydown', event => { if (event.key === 'Enter') panel.querySelector('.command-btn').click(); });
+      body.appendChild(panel);
+    }
 
     details.appendChild(body);
     container.appendChild(details);
