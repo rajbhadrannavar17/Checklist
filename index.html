@@ -521,14 +521,34 @@ const PHASE_HELPERS = {
   sensitive: ['Sensitive-data checks', ['curl -s {url}', 'Use browser DevTools Network and Storage panels to review authorised test traffic.', 'Check URLs, caches, JavaScript bundles and source maps for unintended sensitive data.']]
 };
 
-function commandFor(helper, target){
+const API_PHASE_HELPERS = {
+  recon: ['API inventory work-card', ['curl -sI {url}', 'nuclei -u {url} -tags api,exposure', 'Map documented, legacy, versioned and GraphQL endpoints; record method, authentication and role requirement.']],
+  authtok: ['API authentication work-card', ['curl -sI {url}', 'Use Burp Suite to review API-key, JWT, OAuth2 and refresh-token handling with approved test accounts.', 'Verify expiry, revocation, scope and rotation behaviour.']],
+  bola: ['BOLA work-card', ['Capture an authorised object request in Burp Repeater.', 'Compare ownership enforcement with two approved test accounts.', 'Record the object identifier, role, response code and response-body difference.']],
+  bfla: ['Function-level authorization work-card', ['Map admin and privileged API functions from documentation and traffic.', 'Replay only authorised low-privilege test-account requests in Burp Repeater.', 'Verify method, endpoint and role checks happen server-side.']],
+  data: ['Property-level authorization work-card', ['Inspect API responses for fields not required by the caller role.', 'Use an approved test request to review create/update field handling.', 'Confirm sensitive fields are filtered on reads and protected on writes.']],
+  resource: ['Resource-consumption work-card', ['curl -sI {url}', 'Establish agreed request-rate and payload-size ceilings before testing.', 'Review pagination, batching, export and expensive queries within agreed limits.']],
+  flows: ['Business-flow API work-card', ['Build an expected state-transition map from the documented flow.', 'Use Burp Repeater to validate permitted transitions with approved test accounts.', 'Check automation resistance, one-time-use conditions and usage limits.']],
+  ssrf: ['Third-party / SSRF API work-card', ['Identify callback, import and URL-consuming parameters.', 'Use an approved controlled callback endpoint for validation.', 'Review allowlists, response validation and metadata-service restrictions.']],
+  misconfig: ['API configuration work-card', ['curl -sI {url}', 'nuclei -u {url} -tags misconfig,headers,tls', 'Review CORS, TLS, errors, default settings and management endpoints.']],
+  graphql: ['GraphQL work-card', ['Identify the GraphQL endpoint from authorised documentation or traffic.', 'Review introspection, resolver authorization, query depth, aliases and batching within agreed limits.', 'Record limits and error-handling behaviour.']]
+};
+
+function commandFor(helper, target, phase){
   const raw = target.trim();
   if (!raw) return '';
   let url = raw;
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
   let host;
   try { host = new URL(url).hostname; } catch(e) { return 'Enter a valid authorised URL or IP address.'; }
-  return helper[1].map(line => line.replaceAll('{url}', url).replaceAll('{host}', host).replaceAll('{target}', raw)).join('\n\n');
+  const actions = helper[1].map((line, index) => (index + 1) + '. ' + line.replaceAll('{url}', url).replaceAll('{host}', host).replaceAll('{target}', raw)).join('\n\n');
+  return 'VAPT WORK-CARD\n' +
+    'Phase: ' + phase + '\n' +
+    'Target: ' + url + ' (host: ' + host + ')\n\n' +
+    'Objective\nValidate the controls relevant to this phase against the authorised target, while preserving service availability and collecting reproducible evidence.\n\n' +
+    'Execution plan\n' + actions + '\n\n' +
+    'Evidence to capture\n• Exact request/command and UTC timestamp\n• Sanitised request/response, status code, headers and relevant screenshots\n• Test-account role, affected object/endpoint and observed versus expected result\n\n' +
+    'Validation standard\nConfirm findings with a repeatable, low-impact test. Record scope, preconditions, business impact, remediation guidance and retest result. Do not test beyond written authorisation or agreed rate limits.';
 }
 
 // Ordered to follow the supplied engagement flow. Sources appear once only,
@@ -634,7 +654,7 @@ function render(){
       body.appendChild(row);
     });
 
-    const helper = current === 'web' ? PHASE_HELPERS[cat.id] : null;
+    const helper = (current === 'web' ? PHASE_HELPERS : API_PHASE_HELPERS)[cat.id];
     if (helper) {
       const panel = document.createElement('section');
       panel.className = 'command-helper';
@@ -645,7 +665,7 @@ function render(){
       const input = panel.querySelector('.command-target');
       const output = panel.querySelector('.command-output');
       panel.querySelector('.command-btn').addEventListener('click', () => {
-        output.textContent = commandFor(helper, input.value);
+        output.textContent = commandFor(helper, input.value, cat.title);
         output.classList.toggle('visible', !!output.textContent);
       });
       input.addEventListener('keydown', event => { if (event.key === 'Enter') panel.querySelector('.command-btn').click(); });
